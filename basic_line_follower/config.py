@@ -10,6 +10,19 @@
 configs for the line follower
 """
 
+DEBUG = True
+if DEBUG:
+    import pprint
+    pp = pprint.PrettyPrinter()
+    def pprint(*ss):
+        global pp
+        if type(ss) == list:
+            for s in ss:
+                pp.pprint(s)
+        else:
+            pp.pprint(ss)
+
+
 # a csv file relative to line_planner.py
 WAYPOINTS_FILE = 'waypoints.csv'
 
