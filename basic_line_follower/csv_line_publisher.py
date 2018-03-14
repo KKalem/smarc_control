@@ -64,13 +64,13 @@ class LinePublisher:
         xy_dist = G.euclid_distance(self.pos[:2], self._current_line[1][:2])
         z_dist = np.abs(self.pos[2] - self._current_line[1][2])
         if xy_dist <= config.LINE_END_XY_THRESHOLD and z_dist <= config.LINE_END_Z_THRESHOLD:
-            print('LINE CHANGED')
+            config.pprint('LINE CHANGED')
             # reached the target, request to follow the next line
             self._wps = self._wps[1:]
             try:
                 self._current_line = [self._wps[0], self._wps[1]]
             except IndexError:
-                print('Out of waypoints!')
+                config.pprint('Out of waypoints!')
                 sys.exit()
 
         # create a Path message with whatever frame we received the localisation in
