@@ -42,6 +42,7 @@ class LoloPublisher:
         self.frame_id = frame_id
 
 
+
     def yaw(self, direction, frame_id='odom'):
         """
         + = move right
@@ -89,7 +90,7 @@ class LoloPublisher:
 
 
 class LineController:
-    def __init__(self, line_topic, pose_topic):
+    def __init__(self, line_topic, pose_topic, no_pitch = False):
 
         # receive the line requests from ros
         rospy.Subscriber(line_topic, Path, self.update_line)
@@ -112,6 +113,9 @@ class LineController:
         # we need to change from yz to xz if the two points have the same 
         # y,z values, this leads to nans in distance calculations!
         self._using_yz_for_pitch=True
+
+        # disable pitch control
+        self._no_pitch = no_pitch
 
     def update_pose(self, data):
         datapos = data.pose.pose.position
@@ -174,34 +178,61 @@ class LineController:
             # negative s = line is to the right
             yaw_correction = np.sign(s)*self._yaw_pid.update(yaw_error, dt)
             self._lolopub.yaw(yaw_correction)
-            #  print('yaw e:',yaw_error)
 
-        x0,y0,z0 = self.pos
-        x1,y1,z1 = self._current_line[0]
-        x2,y2,z2 = self._current_line[1]
+        if not self._no_pitch:
+            x0,y0,z0 = self.pos
+            x1,y1,z1 = self._current_line[0]
+            x2,y2,z2 = self._current_line[1]
 
-        # create a plane from the current line.
-        pa = np.array([x1,y1,z1])
-        pb = np.array([x2,y2,z2])
-        # put a point near the middle somewhere
-        pc = np.array([x1+10,y1+10,(z1+z2)/2])
-        # make a plane out of these 3 points
-        ab = pa-pb
-        ac = pa-pc
-        xx = np.cross(ab,ac)
-        d = xx[0]*pa[0] + xx[1]*pa[1] + xx[2]*pa[2]
-        # this function returns +1 if the point is above the plane
-        above = lambda pp: -np.sign(xx[0]*pp[0]+xx[1]*pp[1]+xx[2]*pp[2]-d)
+            # create a plane from the current line.
+            pa = np.array([x1,y1,z1])
+            pb = np.array([x2,y2,z2])
+            # put a point near the middle somewhere
+            pc = np.array([x1+10,y1+10,(z1+z2)/2])
+            # make a plane out of these 3 points
+            ab = pa-pb
+            ac = pa-pc
+            xx = np.cross(ab,ac)
+            d = xx[0]*pa[0] + xx[1]*pa[1] + xx[2]*pa[2]
+            # this function returns +1 if the point is above the plane
+            above = lambda pp: -np.sign(xx[0]*pp[0]+xx[1]*pp[1]+xx[2]*pp[2]-d)
 
-        # this gives the magnitude of the error
-        pitch_error = np.abs((xx[0]*x0+xx[1]*y0+xx[2]*z0+d)/np.sqrt(xx[0]**2+xx[1]**2+xx[2]**2))
+            # this gives the magnitude of the error
+            pitch_error = np.abs((xx[0]*x0+xx[1]*y0+xx[2]*z0+d)/np.sqrt(xx[0]**2+xx[1]**2+xx[2]**2))
 
-        # this only gives the magnitude of the error, not the 'side' of it
-        pitch_correction = self._pitch_pid.update(pitch_error, dt)
+            # this only gives the magnitude of the error, not the 'side' of it
+            pitch_correction = self._pitch_pid.update(pitch_error, dt)
 
-        # combine side with magnitude for control
-        control = above(self.pos)*pitch_correction
-        self._lolopub.pitch(control)
+            # combine side with magnitude for control
+            control = above(self.pos)*pitch_correction
+            self._lolopub.pitch(control)
 
 
+if __name__=='__main__':
+    import config
+    import rospy
+    import time
+    import sys
 
+
+    args = sys.argv
+    if args[1] == 'nopitch':
+        no_pitch = True
+    else:
+        no_pitch = False
+
+    pose_topic = config.POSE_TOPIC
+    line_topic = config.LINE_TOPIC
+
+    # controller subs to a line topic and follows that line using PID for pitch/yaw
+    # LoLo rolls when yaw'ing and we can do nothing about it now. (16/02)
+    lc = LineController(line_topic = line_topic,
+                        pose_topic = pose_topic,
+                        no_pitch = no_pitch)
+
+    t1 = time.time()
+    while not rospy.is_shutdown():
+        dt = time.time()-t1
+        lc.update(dt)
+        t1 = time.time()
+        rate.sleep()

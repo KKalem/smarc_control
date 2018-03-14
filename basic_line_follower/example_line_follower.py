@@ -36,7 +36,8 @@ if __name__=='__main__':
     # controller subs to a line topic and follows that line using PID for pitch/yaw
     # LoLo rolls when yaw'ing and we can do nothing about it now. (16/02)
     lc = LineController(line_topic = line_topic,
-                        pose_topic = pose_topic)
+                        pose_topic = pose_topic,
+                        no_pitch=True)
 
     t1 = time.time()
     while not rospy.is_shutdown():
