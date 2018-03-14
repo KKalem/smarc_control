@@ -51,7 +51,7 @@ class LoloPublisher:
 
         out = FloatStamped()
         out.header.frame_id = frame_id
-        out.data = direction
+        out.data = -1*direction
 
         self.fin0pub.publish(out)
         self.fin1pub.publish(out)
@@ -59,7 +59,7 @@ class LoloPublisher:
         # the control for these fins are inverted for some reason
         out = FloatStamped()
         out.header.frame_id = frame_id
-        out.data = direction * -1
+        out.data = direction # * -1
 
         self.fin2pub.publish(out)
         self.fin3pub.publish(out)
@@ -177,7 +177,7 @@ class LineController:
             s = (x-x1)*(y2-y1)-(y-y1)*(x2-x1)
             # negative s = line is to the right
             yaw_correction = np.sign(s)*self._yaw_pid.update(yaw_error, dt)
-            self._lolopub.yaw(yaw_correction)
+            self._lolopub.yaw(yaw_correction, self._frame_id)
 
         if not self._no_pitch:
             x0,y0,z0 = self.pos
@@ -205,7 +205,7 @@ class LineController:
 
             # combine side with magnitude for control
             control = above(self.pos)*pitch_correction
-            self._lolopub.pitch(control)
+            self._lolopub.pitch(control, self._frame_id)
 
 
 if __name__=='__main__':

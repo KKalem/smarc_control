@@ -49,7 +49,7 @@ LOLO_BACKFIN_INPUT = 'lolo_auv/back_fins/0/input'
 POSE_TOPIC = 'lolo_auv/pose_gt'
 
 # PID gain values for the LOLO auv. Hand-made!
-LOLO_YAW_PID = [0.3, 0, 1.2]
+LOLO_YAW_PID = [0.7, 0, 1.2]
 LOLO_PITCH_PID = [1, 0, 2.5]
 
 
