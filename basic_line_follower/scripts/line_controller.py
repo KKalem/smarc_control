@@ -214,6 +214,7 @@ if __name__=='__main__':
     import time
     import sys
 
+    rospy.init_node('line_controller', anonymous=True)
 
     args = sys.argv
     if args[1] == 'nopitch':
@@ -231,6 +232,7 @@ if __name__=='__main__':
                         no_pitch = no_pitch)
 
     t1 = time.time()
+    rate = rospy.Rate(config.UPDATE_FREQ)
     while not rospy.is_shutdown():
         dt = time.time()-t1
         lc.update(dt)
