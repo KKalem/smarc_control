@@ -36,7 +36,7 @@ LINE_END_XY_THRESHOLD = 1
 LINE_END_Z_THRESHOLD = 50
 
 # the topic to both publish and subscribe to
-LINE_TOPIC = '/lolo_auv/current_line'
+LINE_TOPIC = '/lolo_auv/lolo_auv/camera/pipeline_locator'
 
 # fin topics
 LOLO_FIN0_INPUT = 'lolo_auv/fins/0/input'
