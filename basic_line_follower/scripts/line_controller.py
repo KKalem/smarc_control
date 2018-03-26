@@ -90,10 +90,13 @@ class LoloPublisher:
 
 
 class LineController:
-    def __init__(self, line_topic, pose_topic, no_pitch = False):
+    def __init__(self, line_topic, pose_topic, following_curve = True, no_pitch = False):
 
-        # receive the line requests from ros
-        rospy.Subscriber(line_topic, Path, self.update_line)
+        if following_curve:
+            rospy.Subscriber(line_topic, Path, self.update_curve)
+        else:
+            # receive the line requests from ros
+            rospy.Subscriber(line_topic, Path, self.update_line)
 
         self.pos = [0,0,0]
         self.ori = [0,0,0,0]
@@ -165,7 +168,6 @@ class LineController:
         for p in data.poses:
             points.append(p.pose.position)
 
-
         # the segment intersects a circle of radius r if
         # the first point is closer than r and the second is further
         # we also want the 'last' one that intersects, not the first
@@ -173,14 +175,20 @@ class LineController:
         # p1 inside, p2 outside should not happen for more than 1 point
         selfpos = self.pos[:2]
         for i in range(1,len(points)):
-            p1 = points[i-1]
-            p2 = points[i]
+            p1 = (points[i-1].x,points[i-1].y,points[i-1].z)
+            p2 = (points[i].x,points[i].y,points[i].z)
 
-            if G.euclid_distance(selfpos, p1[:2]) < config.LOOK_AHEAD_R:
+            p1d = G.euclid_distance(selfpos, p1[:2])
+            p2d = G.euclid_distance(selfpos, p2[:2])
+            if p1d < config.LOOK_AHEAD_R:
+                print('first in')
                 # the first point is inside, check the second one
-                if G.euclid_distance(selfpos, p2[:2]) >= config.LOOK_AHEAD_R:
+                if p2d >= config.LOOK_AHEAD_R:
+                    print('second out')
                     # we are intersecting!
                     line = (p1,p2)
+            else:
+                print(p1d,p2d)
 
         # set these to be used later
         self._current_line = line

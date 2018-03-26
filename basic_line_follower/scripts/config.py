@@ -38,7 +38,7 @@ LINE_END_Z_THRESHOLD = 50
 # to follow. Imagine a circle around the AUV
 # with this radius, intersect with the curve.
 # this is that radius
-LOOK_AHEAD_R = 5
+LOOK_AHEAD_R = 20
 
 # the topic to both publish and subscribe to
 LINE_TOPIC = '/lolo_auv/lolo_auv/camera/pipeline_locator'
