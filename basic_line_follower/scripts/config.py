@@ -34,6 +34,11 @@ UPDATE_FREQ = 30
 # pitch control is very slow, so we might want them to be separate
 LINE_END_XY_THRESHOLD = 1
 LINE_END_Z_THRESHOLD = 50
+# how many meters to 'look ahead' in the curve
+# to follow. Imagine a circle around the AUV
+# with this radius, intersect with the curve.
+# this is that radius
+LOOK_AHEAD_R = 20
 
 # the topic to both publish and subscribe to
 LINE_TOPIC = '/lolo_auv/lolo_auv/camera/pipeline_locator'

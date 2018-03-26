@@ -45,7 +45,7 @@ class LoloPublisher:
 
     def yaw(self, direction, frame_id='odom'):
         """
-        + = move right
+        + = move left
         """
         #  direction = np.sign(direction)
 
@@ -64,9 +64,9 @@ class LoloPublisher:
         self.fin2pub.publish(out)
         self.fin3pub.publish(out)
 
-        if np.sign(out.data)==1:
+        if np.sign(out.data)== -1:
             config.pprint('>>>',out.data)
-        elif np.sign(out.data)==-1:
+        elif np.sign(out.data)== 1:
             config.pprint('<<<',out.data)
         else:
             config.pprint('---',out.data)
@@ -90,10 +90,13 @@ class LoloPublisher:
 
 
 class LineController:
-    def __init__(self, line_topic, pose_topic, no_pitch = False):
+    def __init__(self, line_topic, pose_topic, following_curve = True, no_pitch = False):
 
-        # receive the line requests from ros
-        rospy.Subscriber(line_topic, Path, self.update_line)
+        if following_curve:
+            rospy.Subscriber(line_topic, Path, self.update_curve)
+        else:
+            # receive the line requests from ros
+            rospy.Subscriber(line_topic, Path, self.update_line)
 
         self.pos = [0,0,0]
         self.ori = [0,0,0,0]
@@ -139,8 +142,12 @@ class LineController:
     def update_line(self, data):
         # data should contain Path. which has a 'poses' field
         # which contains a list of "PoseStamped"
-        p1 = data.poses[0].pose.position
-        p2 = data.poses[1].pose.position
+        try:
+            p1 = data.poses[0].pose.position
+            p2 = data.poses[1].pose.position
+        except IndexError:
+            config.pprint('No line')
+            return
 
         # extract the  x,y,z values from the PoseStamped things
         l1 = (p1.x, p1.y, p1.z)
@@ -151,6 +158,42 @@ class LineController:
 
         # also extract the frame id, since we will need it when publishing control signals
         self._frame_id = data.header.frame_id
+
+    def update_curve(self, data):
+        # data should contain Path, with multiple,  that represent a discretized curve
+        # we will only use the x,y component for now
+        line = None
+
+        points = []
+        for p in data.poses:
+            points.append(p.pose.position)
+
+        # the segment intersects a circle of radius r if
+        # the first point is closer than r and the second is further
+        # we also want the 'last' one that intersects, not the first
+        # that particular segment is 'forward'.
+        # p1 inside, p2 outside should not happen for more than 1 point
+        selfpos = self.pos[:2]
+        for i in range(1,len(points)):
+            p1 = (points[i-1].x,points[i-1].y,points[i-1].z)
+            p2 = (points[i].x,points[i].y,points[i].z)
+
+            p1d = G.euclid_distance(selfpos, p1[:2])
+            p2d = G.euclid_distance(selfpos, p2[:2])
+            if p1d < config.LOOK_AHEAD_R:
+                print('first in')
+                # the first point is inside, check the second one
+                if p2d >= config.LOOK_AHEAD_R:
+                    print('second out')
+                    # we are intersecting!
+                    line = (p1,p2)
+            else:
+                print(p1d,p2d)
+
+        # set these to be used later
+        self._current_line = line
+        self._frame_id = data.header.frame_id
+
 
 
     def update(self, dt):
