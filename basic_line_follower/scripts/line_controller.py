@@ -139,8 +139,11 @@ class LineController:
     def update_line(self, data):
         # data should contain Path. which has a 'poses' field
         # which contains a list of "PoseStamped"
-        p1 = data.poses[0].pose.position
-        p2 = data.poses[1].pose.position
+        try:
+            p1 = data.poses[0].pose.position
+            p2 = data.poses[1].pose.position
+        except IndexError:
+            return
 
         # extract the  x,y,z values from the PoseStamped things
         l1 = (p1.x, p1.y, p1.z)
