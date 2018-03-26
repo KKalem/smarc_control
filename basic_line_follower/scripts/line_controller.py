@@ -13,6 +13,7 @@ import rospy
 
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped, Pose
 from uuv_gazebo_ros_plugins_msgs.msg import FloatStamped
 
 from utils import geometry as G
@@ -91,6 +92,9 @@ class LoloPublisher:
 
 class LineController:
     def __init__(self, line_topic, pose_topic, following_curve = True, no_pitch = False):
+
+        # debugging 'current line' publisher
+        self.debug_line_pub = rospy.Publisher(config.DEBUG_LINE_TOPIC, Path, queue_size=1)
 
         if following_curve:
             rospy.Subscriber(line_topic, Path, self.update_curve)
@@ -181,18 +185,53 @@ class LineController:
             p1d = G.euclid_distance(selfpos, p1[:2])
             p2d = G.euclid_distance(selfpos, p2[:2])
             if p1d < config.LOOK_AHEAD_R:
-                print('first in')
+                print('p1 inside')
                 # the first point is inside, check the second one
                 if p2d >= config.LOOK_AHEAD_R:
-                    print('second out')
+                    print('p2 outside')
                     # we are intersecting!
                     line = (p1,p2)
+                else:
+                    print('p2d too small:',p2d)
             else:
-                print(p1d,p2d)
+                print('p1d too large:',p1d)
 
         # set these to be used later
         self._current_line = line
         self._frame_id = data.header.frame_id
+
+        # elongate the line for visualization purposes
+        if line is None:
+            return
+        x1,y1,z1 = line[0]
+        x2,y2,z2 = line[1]
+        slope = (y2-y1)/(x2-x1)
+        d = 10
+        x2 += d
+        y2 += d*slope
+        x1 -= d
+        y1 -= d*slope
+
+        # publish the current line
+        pose1 = Pose()
+        pose1.position.x = x1
+        pose1.position.y = y1
+        pose1.position.z = z1
+        stamped1 = PoseStamped()
+        stamped1.pose = pose1
+
+        pose2 = Pose()
+        pose2.position.x = x2
+        pose2.position.y = y2
+        pose2.position.z = z2
+        stamped2 = PoseStamped()
+        stamped2.pose = pose2
+
+        path = Path()
+        path.poses = [stamped1,stamped2]
+        path.header.frame_id = self._frame_id
+
+        self.debug_line_pub.publish(path)
 
 
 
@@ -249,6 +288,8 @@ class LineController:
             # combine side with magnitude for control
             control = above(self.pos)*pitch_correction
             self._lolopub.pitch(control, self._frame_id)
+
+
 
 
 if __name__=='__main__':

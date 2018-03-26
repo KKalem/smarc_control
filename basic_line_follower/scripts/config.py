@@ -23,6 +23,7 @@ if DEBUG:
             pp.pprint(ss)
 
 
+
 # a csv file relative to line_planner.py
 WAYPOINTS_FILE = 'waypoints.csv'
 
@@ -56,5 +57,7 @@ POSE_TOPIC = 'lolo_auv/pose_gt'
 # PID gain values for the LOLO auv. Hand-made!
 LOLO_YAW_PID = [0.7, 0, 1.2]
 LOLO_PITCH_PID = [1, 0, 2.5]
+
+DEBUG_LINE_TOPIC = 'lolo_auv/debug_line'
 
 
