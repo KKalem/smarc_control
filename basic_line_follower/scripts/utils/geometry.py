@@ -6,9 +6,13 @@ Created on Sun Feb 21 11:44:13 2016
 """
 from __future__ import print_function
 import numpy as np
+import math
 
 
 ZERO = 1e-15
+
+def quat_to_yaw(quat):
+    return math.atan2(2.*(quat[0]*quat[1] + quat[3]*quat[2]), quat[3]**2 + quat[0]**2 - quat[1]**2 - quat[2]**2)
 
 def norm(V):
     return np.linalg.norm(np.array(V))
