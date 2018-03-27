@@ -178,23 +178,24 @@ class LineController:
         # that particular segment is 'forward'.
         # p1 inside, p2 outside should not happen for more than 1 point
         selfpos = self.pos[:2]
-        for i in range(1,len(points)):
+        for i in range(len(points)-1, 0, -1):
             p1 = (points[i-1].x,points[i-1].y,points[i-1].z)
             p2 = (points[i].x,points[i].y,points[i].z)
 
             p1d = G.euclid_distance(selfpos, p1[:2])
             p2d = G.euclid_distance(selfpos, p2[:2])
-            if p1d < config.LOOK_AHEAD_R:
-                print('p1 inside')
+            if p1d > config.LOOK_AHEAD_R:
+                print('p1 outside')
                 # the first point is inside, check the second one
-                if p2d >= config.LOOK_AHEAD_R:
-                    print('p2 outside')
+                if p2d < config.LOOK_AHEAD_R:
+                    print('p2 inside')
                     # we are intersecting!
+                    print("Success: ", line)
                     line = (p1,p2)
                 else:
-                    print('p2d too small:',p2d)
+                    print('p2d too large:',p2d)
             else:
-                print('p1d too large:',p1d)
+                print('p1d too small:',p1d)
 
         # set these to be used later
         self._current_line = line
@@ -203,6 +204,8 @@ class LineController:
         # elongate the line for visualization purposes
         if line is None:
             return
+
+
         x1,y1,z1 = line[0]
         x2,y2,z2 = line[1]
         slope = (y2-y1)/(x2-x1)
