@@ -23,7 +23,7 @@ import config
 
 
 class LoloPublisher:
-    def __init__(self, frame_id='odom'):
+    def __init__(self, frame_id='map'):
         """
         a simple class to keep information about lolos fins.
         publishes coordinated fin movements when move_xxx methods are called
@@ -44,7 +44,7 @@ class LoloPublisher:
 
 
 
-    def yaw(self, direction, frame_id='odom'):
+    def yaw(self, direction, frame_id='map'):
         """
         + = move left
         """
@@ -65,14 +65,14 @@ class LoloPublisher:
         self.fin2pub.publish(out)
         self.fin3pub.publish(out)
 
-        if np.sign(out.data)== -1:
-            config.pprint('>>>',out.data)
-        elif np.sign(out.data)== 1:
-            config.pprint('<<<',out.data)
-        else:
-            config.pprint('---',out.data)
+        #  if np.sign(out.data)== -1:
+            #  config.pprint('>>>',out.data)
+        #  elif np.sign(out.data)== 1:
+            #  config.pprint('<<<',out.data)
+        #  else:
+            #  config.pprint('---',out.data)
 
-    def pitch(self,direction, frame_id='odom'):
+    def pitch(self,direction, frame_id='map'):
         """
         + = move up
         """
@@ -109,7 +109,7 @@ class LineController:
         rospy.Subscriber(pose_topic, Odometry, self.update_pose)
 
         self._current_line = None
-        self._frame_id = 'odom'
+        self._frame_id = 'map'
 
         self._yaw_pid = Pid.PID(*config.LOLO_YAW_PID)
         self._pitch_pid = Pid.PID(*config.LOLO_PITCH_PID)
@@ -172,6 +172,10 @@ class LineController:
         for p in data.poses:
             points.append(p.pose.position)
 
+        if len(points) < 1:
+            print('No curve received')
+            return
+
         # the segment intersects a circle of radius r if
         # the first point is closer than r and the second is further
         # we also want the 'last' one that intersects, not the first
@@ -185,31 +189,27 @@ class LineController:
             p1d = G.euclid_distance(selfpos, p1[:2])
             p2d = G.euclid_distance(selfpos, p2[:2])
             if p1d > config.LOOK_AHEAD_R:
-                print('p1 outside')
+                #  print('p1d:',p1d,'p2d:',p2d)
                 # the first point is inside, check the second one
                 if p2d < config.LOOK_AHEAD_R:
-                    print('p2 inside')
                     # we are intersecting!
-                    print("Success: ", line)
                     line = (p1,p2)
-                else:
-                    print('p2d too large:',p2d)
-            else:
-                print('p1d too small:',p1d)
+
+        if line is None:
+            print('No line')
+            return
 
         # set these to be used later
         self._current_line = line
         self._frame_id = data.header.frame_id
 
+
+
         # elongate the line for visualization purposes
-        if line is None:
-            return
-
-
         x1,y1,z1 = line[0]
         x2,y2,z2 = line[1]
         slope = (y2-y1)/(x2-x1)
-        d = 10
+        d = -5
         x2 += d
         y2 += d*slope
         x1 -= d
@@ -242,7 +242,6 @@ class LineController:
         if self._current_line is None:
             return
         # use a pid for yaw and another for pitch.
-        # bang-bang control for the fins
 
         # first the yaw, find the yaw error
         # just project the 3D positions to z=0 plane for the yaw control
@@ -253,15 +252,21 @@ class LineController:
         yaw_line_p1 = np.array(self._current_line[0][:2])
         yaw_line_p2 = np.array(self._current_line[1][:2])
 
-        yaw_error = G.ptToLineSegment(yaw_line_p1, yaw_line_p2, yaw_pos)
+        current_yaw = G.quat_to_yaw(self.ori) % (2*np.pi)
+        target_yaw = G.directed_angle([1,0], yaw_line_p1-yaw_pos) % (2*np.pi)
+        yaw_error = -target_yaw + current_yaw
+        #  print('current_yaw:',current_yaw*config.RADTODEG,'target_yaw:',target_yaw*config.RADTODEG,'yaw_err:',yaw_error*config.RADTODEG)
+
+        #  yaw_error = G.ptToLineSegment(yaw_line_p1, yaw_line_p2, yaw_pos)
         if not np.isnan(yaw_error):
             # this only gives the magnitude of the error, not the 'side' of it
-            x,y = yaw_pos
-            x1,y1 = yaw_line_p1
-            x2,y2 = yaw_line_p2
-            s = (x-x1)*(y2-y1)-(y-y1)*(x2-x1)
+            #  x,y = yaw_pos
+            #  x1,y1 = yaw_line_p1
+            #  x2,y2 = yaw_line_p2
+            #  s = (x-x1)*(y2-y1)-(y-y1)*(x2-x1)
             # negative s = line is to the right
-            yaw_correction = np.sign(s)*self._yaw_pid.update(yaw_error, dt)
+            #  yaw_correction = np.sign(s)*self._yaw_pid.update(yaw_error, dt)
+            yaw_correction = self._yaw_pid.update(yaw_error, dt)
             self._lolopub.yaw(yaw_correction, self._frame_id)
 
         if not self._no_pitch:
@@ -303,11 +308,11 @@ if __name__=='__main__':
 
     rospy.init_node('line_controller', anonymous=True)
 
+    no_pitch = True
     args = sys.argv
-    if args[1] == 'nopitch':
-        no_pitch = True
-    else:
-        no_pitch = False
+    if len(args) > 1:
+        if args[1] == 'pitch':
+            no_pitch = False
 
     pose_topic = config.POSE_TOPIC
     line_topic = config.LINE_TOPIC
