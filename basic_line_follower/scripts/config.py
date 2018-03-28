@@ -43,6 +43,10 @@ LINE_END_Z_THRESHOLD = 1
 # this is that radius
 LOOK_AHEAD_R = 10
 
+# height to add to the starting height of the auv
+# will try to control pitch so that target_z = init_height + z_buffer
+Z_BUFFER = 1
+
 # the topic to both publish and subscribe to
 LINE_TOPIC = '/lolo_auv/lolo_auv/camera/pipeline_locator'
 
@@ -60,8 +64,8 @@ POSE_TOPIC = 'gt_in_odom'
 #  POSE_TOPIC = 'lolo_auv/pose_odom'
 
 # PID gain values for the LOLO auv. Hand-made!
-LOLO_YAW_PID = [1, 0, 0.2]
-LOLO_PITCH_PID = [1, 0, 2.5]
+LOLO_YAW_PID = [5, 0, 0.2]
+LOLO_PITCH_PID = [1, 0.1, 5.5]
 
 DEBUG_LINE_TOPIC = 'lolo_auv/debug_line'
 
