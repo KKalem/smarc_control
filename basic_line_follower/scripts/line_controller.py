@@ -250,11 +250,14 @@ class LineController:
         # pitch can use either xz OR yz.
         yaw_pos = np.array(self.pos[:2])
         yaw_line_p1 = np.array(self._current_line[0][:2])
-        yaw_line_p2 = np.array(self._current_line[1][:2])
+        #yaw_line_p2 = np.array(self._current_line[1][:2])
 
-        current_yaw = G.quat_to_yaw(self.ori) % (2*np.pi)
-        target_yaw = G.directed_angle([1,0], yaw_line_p1-yaw_pos) % (2*np.pi)
-        yaw_error = -target_yaw + current_yaw
+        current_yaw = G.quat_to_yaw(self.ori) #% (2*np.pi)
+        yaw_error = -G.directed_angle([np.cos(current_yaw), np.sin(current_yaw)], yaw_line_p1-yaw_pos)# % (2*np.pi)
+        
+        #angle1 = G.quat_to_yaw(self.ori)
+        #angle2 = 
+        #yaw_error = -target_yaw + current_yaw
         #  print('current_yaw:',current_yaw*config.RADTODEG,'target_yaw:',target_yaw*config.RADTODEG,'yaw_err:',yaw_error*config.RADTODEG)
 
         #  yaw_error = G.ptToLineSegment(yaw_line_p1, yaw_line_p2, yaw_pos)
